@@ -1,0 +1,661 @@
+<!-- Chatbot guiado Láser Bahía | Diseño y Desarrollo: juancapurrodesign.com -->
+<!-- Pegar en WPCode: Tipo "HTML Snippet", ubicación "Site Wide Footer" -->
+<style>
+#lb-bot, #lb-bot * { box-sizing: border-box; }
+#lb-bot {
+  /* ===== Colores de marca: ajustar acá ===== */
+  --lb-accent: #f26b1d;
+  --lb-accent-dark: #d4560f;
+  --lb-dark: #1c1c1e;
+  --lb-bg: #ffffff;
+  --lb-muted: #f1f1f3;
+  --lb-text: #222222;
+  --lb-wa: #25d366;
+  position: fixed;
+  bottom: var(--lb-bottom, 20px);
+  z-index: 99990;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--lb-text);
+}
+#lb-bot.lb-left { left: 20px; }
+#lb-bot.lb-right { right: 20px; }
+
+#lb-bot .lb-launcher {
+  width: 60px; height: 60px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--lb-accent); color: #fff; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,.28); transition: transform .2s, background .2s;
+}
+#lb-bot .lb-launcher:hover { background: var(--lb-accent-dark); transform: scale(1.06); }
+#lb-bot .lb-launcher:focus-visible, #lb-bot .lb-chip:focus-visible, #lb-bot .lb-close:focus-visible,
+#lb-bot .lb-send:focus-visible, #lb-bot .lb-input:focus-visible { outline: 3px solid #1a73e8; outline-offset: 2px; }
+#lb-bot .lb-launcher svg { width: 28px; height: 28px; fill: currentColor; }
+
+#lb-bot .lb-panel {
+  position: absolute; bottom: 74px; width: 370px; max-width: calc(100vw - 40px);
+  height: 560px;
+  max-height: calc(100vh - var(--lb-bottom, 20px) - 74px - 16px);
+  max-height: calc(100dvh - var(--lb-bottom, 20px) - 74px - 16px);
+  background: var(--lb-bg); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,.28);
+  display: none; flex-direction: column;
+}
+#lb-bot.lb-left .lb-panel { left: 0; }
+#lb-bot.lb-right .lb-panel { right: 0; }
+#lb-bot.lb-open .lb-panel { display: flex; animation: lbIn .22s ease-out; }
+@keyframes lbIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #lb-bot.lb-open .lb-panel { animation: none; }
+  #lb-bot .lb-launcher { transition: none; }
+}
+
+#lb-bot .lb-head { background: var(--lb-dark); color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+#lb-bot .lb-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--lb-accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex: none; }
+#lb-bot .lb-title { font-weight: 700; font-size: 16px; line-height: 1.2; }
+#lb-bot .lb-sub { font-size: 12px; opacity: .75; }
+#lb-bot .lb-wa-head {
+  margin-left: auto; flex: none; height: 36px; padding: 0 9px 0 14px; gap: 7px; border-radius: 999px;
+  background: var(--lb-wa); color: #fff; text-decoration: none; font-size: 13px; font-weight: 700; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center; transition: background .15s, transform .15s;
+}
+#lb-bot .lb-ttl { min-width: 0; }
+#lb-bot .lb-title, #lb-bot .lb-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#lb-bot .lb-head { gap: 8px; }
+@media (max-width: 420px) { #lb-bot .lb-avatar { display: none; } }
+#lb-bot .lb-wa-head:hover { background: #1ebe5b; transform: scale(1.08); }
+#lb-bot .lb-wa-head:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+#lb-bot .lb-wa-head svg { width: 20px; height: 20px; fill: currentColor; }
+#lb-bot .lb-close { margin-left: 0; background: transparent; border: 0; color: #fff; font-size: 26px; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+#lb-bot .lb-close:hover { background: rgba(255,255,255,.15); }
+
+#lb-bot .lb-msgs { flex: 1; overflow-y: auto; padding: 14px; background: #fafafa; display: flex; flex-direction: column; gap: 10px; }
+#lb-bot .lb-msg { max-width: 88%; padding: 10px 13px; border-radius: 14px; word-wrap: break-word; overflow-wrap: anywhere; }
+#lb-bot .lb-msg.bot { background: var(--lb-muted); align-self: flex-start; border-bottom-left-radius: 4px; }
+#lb-bot .lb-msg.me { background: var(--lb-accent); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+#lb-bot .lb-msg a { color: var(--lb-accent-dark); font-weight: 600; }
+#lb-bot .lb-msg ul { margin: 6px 0 0; padding-left: 18px; }
+#lb-bot .lb-msg li { margin: 2px 0; }
+#lb-bot .lb-ok { color: #1a8f3c; font-weight: 700; }
+#lb-bot .lb-no { color: #c0392b; font-weight: 700; }
+#lb-bot .lb-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+#lb-bot .lb-opts { display: flex; flex-wrap: wrap; gap: 8px; align-self: flex-start; max-width: 100%; }
+#lb-bot .lb-chip {
+  background: #fff; color: var(--lb-accent-dark); border: 1.5px solid var(--lb-accent); border-radius: 999px;
+  padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; transition: background .15s, color .15s;
+}
+#lb-bot .lb-chip:hover { background: var(--lb-accent); color: #fff; }
+#lb-bot .lb-chip.lb-wa { background: var(--lb-wa); border-color: var(--lb-wa); color: #0b3d1c; }
+#lb-bot .lb-chip.lb-wa:hover { background: #1ebe5b; color: #fff; }
+
+#lb-bot .lb-form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #e4e4e7; background: #fff; }
+#lb-bot .lb-input { flex: 1; min-width: 0; border: 1.5px solid #d4d4d8; border-radius: 999px; padding: 9px 14px; font: inherit; font-size: 16px; /* 16px evita el zoom automático de iOS al enfocar */ }
+#lb-bot .lb-input:focus { border-color: var(--lb-accent); outline: none; }
+#lb-bot .lb-send { border: 0; background: var(--lb-accent); color: #fff; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; }
+#lb-bot .lb-send:hover { background: var(--lb-accent-dark); }
+#lb-bot .lb-send svg { width: 18px; height: 18px; fill: currentColor; }
+#lb-bot .lb-foot { text-align: center; font-size: 11px; color: #8a8a90; padding: 0 0 8px; background: #fff; }
+
+/* ===== Botón volver (encabezado) ===== */
+#lb-bot .lb-back {
+  background: transparent; border: 0; color: #fff; font-size: 30px; line-height: 1; cursor: pointer;
+  padding: 0 6px 4px 0; margin-right: -4px; border-radius: 8px; flex: none;
+}
+#lb-bot .lb-back:hover { background: rgba(255,255,255,.15); }
+#lb-bot .lb-back:focus-visible { outline: 3px solid #1a73e8; outline-offset: 2px; }
+#lb-bot .lb-back[hidden] { display: none; }
+
+/* ===== Pulso del botón ===== */
+#lb-bot .lb-launcher { position: relative; }
+#lb-bot .lb-launcher::before,
+#lb-bot .lb-launcher::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--lb-accent); opacity: 0; z-index: -1; pointer-events: none;
+  animation: lbPulse 2.4s ease-out infinite;
+}
+#lb-bot .lb-launcher::after { animation-delay: 1.2s; }
+#lb-bot.lb-open .lb-launcher::before,
+#lb-bot.lb-open .lb-launcher::after { animation: none; opacity: 0; }
+@keyframes lbPulse {
+  0%   { transform: scale(1);   opacity: .55; }
+  80%  { transform: scale(1.85); opacity: 0; }
+  100% { transform: scale(1.85); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #lb-bot .lb-launcher::before, #lb-bot .lb-launcher::after { animation: none; opacity: 0; }
+  #lb-bot .lb-tip { transition: none; }
+}
+
+/* ===== Tooltip automático ===== */
+#lb-bot .lb-tip {
+  position: absolute; bottom: 12px; display: flex; align-items: center; gap: 0;
+  background: #fff; color: var(--lb-text); border-radius: 12px; padding: 2px;
+  box-shadow: 0 6px 22px rgba(0,0,0,.22); white-space: nowrap;
+  opacity: 0; transform: translateY(6px) scale(.96); pointer-events: none; visibility: hidden;
+  transition: opacity .25s, transform .25s, visibility .25s;
+}
+#lb-bot.lb-right .lb-tip { right: 74px; transform-origin: right bottom; }
+#lb-bot.lb-left .lb-tip { left: 74px; transform-origin: left bottom; }
+#lb-bot .lb-tip.lb-tip-show { opacity: 1; transform: none; pointer-events: auto; visibility: visible; }
+#lb-bot .lb-tip::after {
+  content: ""; position: absolute; bottom: 12px; width: 12px; height: 12px; background: #fff; transform: rotate(45deg);
+  box-shadow: 3px -3px 6px rgba(0,0,0,.06);
+}
+#lb-bot.lb-right .lb-tip::after { right: -5px; }
+#lb-bot.lb-left .lb-tip::after { left: -5px; box-shadow: -3px 3px 6px rgba(0,0,0,.06); }
+#lb-bot .lb-tip-btn {
+  border: 0; background: transparent; font: inherit; font-weight: 600; font-size: 15px; color: var(--lb-text);
+  cursor: pointer; padding: 8px 4px 8px 14px; border-radius: 10px; white-space: nowrap;
+}
+#lb-bot .lb-tip-btn small { display: block; font-weight: 400; font-size: 12px; color: #6b6b72; text-align: left; }
+#lb-bot .lb-tip-x {
+  border: 0; background: transparent; color: #8a8a90; font-size: 18px; line-height: 1; cursor: pointer;
+  padding: 4px 8px; border-radius: 8px; align-self: flex-start;
+}
+#lb-bot .lb-tip-x:hover { background: var(--lb-muted); color: #333; }
+#lb-bot .lb-tip-btn:focus-visible, #lb-bot .lb-tip-x:focus-visible { outline: 3px solid #1a73e8; outline-offset: 2px; }
+#lb-bot.lb-open .lb-tip { display: none; }
+
+@media (max-width: 480px) {
+  #lb-bot .lb-tip { max-width: calc(100vw - 120px); }
+  #lb-bot.lb-left { left: 14px; }
+  #lb-bot.lb-right { right: 14px; }
+  #lb-bot .lb-panel { width: calc(100vw - 28px); max-width: none; height: calc(100vh - var(--lb-bottom, 20px) - 70px - 16px); height: calc(100dvh - var(--lb-bottom, 20px) - 70px - 16px); bottom: 70px; }
+}
+</style>
+
+<div id="lb-bot" aria-live="off"></div>
+
+<script>
+(function () {
+  if (window.__lbBotLoaded) return;
+  window.__lbBotLoaded = true;
+
+  /* ===== Configuración ===== */
+  var CFG = {
+    phone: '5492914265252',
+    email: 'ventas@laserbahia.com.ar',
+    side: 'right',     // 'left' o 'right'
+    bottom: 96,        // px desde abajo. 96 lo apila arriba del botón de WhatsApp (Joinchat). Usá 20 si lo desactivan
+    tipText: '¿Necesita ayuda?',
+    tipSub: '',        // texto chico opcional debajo (vacío = una sola línea)
+    tipDelay: 3000,    // ms hasta que aparece el aviso
+    tipDuration: 10000, // ms que queda visible (0 = hasta que lo cierren)
+    waLabel: 'WhatsApp', // texto del botón verde del encabezado (vacío = solo el ícono)
+    tipMaxShows: 3,    // veces que puede aparecer por sesión si el visitante no lo cierra ni abre el chat
+    mapUrl: 'https://maps.app.goo.gl/xKpKuKHYy883y63h6',
+    sims: [
+      ['Simulador sobre material', 'https://laserbahia.com.ar/simulador-de-grabado-sobre-material/'],
+      ['Simulador de grabado sobre placas', 'https://laserbahia.com.ar/simulador-de-grabado-sobre-placas/'],
+      ['Simulador con diseño personalizado', 'https://laserbahia.com.ar/simulador-de-grabado-con-diseno-personalizado/']
+    ]
+  };
+
+  /* ===== Datos (fuente: laserbahia.com.ar/materiales y /preguntas-frecuentes) ===== */
+  var MATS = [
+    { name: 'MDF / Fibrofácil', esp: ['3,0', '5,5', '9,0'], corte: 1, grabado: 1, plegado: 0, impresion: 1 },
+    { name: 'Acrílico', esp: ['2,0', '3,0', '4,0', '+5,0'], corte: 1, grabado: 1, plegado: 1, impresion: 1 },
+    { name: 'Metalex bicapa Plata y Oro', esp: ['1,3'], corte: 1, grabado: 1, plegado: 1, impresion: 1 },
+    { name: 'Goma Eva', esp: ['3,0', '5,0', '10', '15'], corte: 1, grabado: 1, plegado: 0, impresion: 1 },
+    { name: 'Goma Espuma', esp: ['10', '20', '30', '40'], corte: 1, grabado: 1, plegado: 0, impresion: 0 },
+    { name: 'Acero Inoxidable 304', esp: ['0,5', '0,7', '1', '+2'], corte: 1, grabado: 1, plegado: 1, impresion: 0 },
+    { name: 'PVC Espumado', esp: ['3', '5', '8'], corte: 1, grabado: 0, plegado: 1, impresion: 1 },
+    { name: 'Corrugado plástico', esp: ['2', '3', '5', '+8'], corte: 1, grabado: 0, plegado: 1, impresion: 1 },
+    { name: 'Acero SAE 1010', esp: ['1', '2', '3'], corte: 1, grabado: 0, plegado: 1, impresion: 0, horno: 1 },
+    { name: 'Alto Impacto', esp: ['0,3', '0,5', '1,0'], corte: 1, grabado: 0, plegado: 1, impresion: 1 },
+    { name: 'Cartón y Cartulina', esp: ['0,3', '0,5', '1,0'], corte: 1, grabado: 0, plegado: 1, impresion: 1 },
+    { name: 'PET', esp: ['0,5', '1', '1,5', '+2'], corte: 1, grabado: 0, plegado: 1, impresion: 1 },
+    { name: 'Foamboard', esp: ['3', '5', '10'], corte: 1, grabado: 1, plegado: 1, impresion: 1 },
+    { name: 'Cuero y Cuero Flex', esp: ['1'], corte: 1, grabado: 1, plegado: 1, impresion: 1 },
+    { name: 'Textiles', esp: [], corte: 1, grabado: 0, plegado: 0, impresion: 0 }
+  ];
+
+  /* ===== Utilidades ===== */
+  function norm(s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function waLink(text) {
+    return 'https://api.whatsapp.com/send/?phone=' + CFG.phone + (text ? '&text=' + encodeURIComponent(text) : '');
+  }
+  function ext(href, label) { return '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'; }
+
+  /* ===== UI ===== */
+  var root = document.getElementById('lb-bot');
+  if (!root) return;
+  root.classList.add(CFG.side === 'right' ? 'lb-right' : 'lb-left');
+  root.style.setProperty('--lb-bottom', CFG.bottom + 'px');
+  root.innerHTML =
+    '<div class="lb-tip" role="status">' +
+      '<button type="button" class="lb-tip-btn">' + esc(CFG.tipText) + (CFG.tipSub ? '<small>' + esc(CFG.tipSub) + '</small>' : '') + '</button>' +
+      '<button type="button" class="lb-tip-x" aria-label="Cerrar aviso">&times;</button>' +
+    '</div>' +
+    '<div class="lb-panel" role="dialog" aria-label="Asistente de Láser Bahía">' +
+      '<div class="lb-head"><button type="button" class="lb-back" aria-label="Volver al paso anterior" title="Volver" hidden>&#8249;</button><div class="lb-avatar" aria-hidden="true">LB</div>' +
+      '<div class="lb-ttl"><div class="lb-title">Láser Bahía</div><div class="lb-sub">Asistente virtual</div></div>' +
+      '<a class="lb-wa-head" href="' + waLink('Hola Láser Bahía, quería hacer una consulta.') + '" target="_blank" rel="noopener noreferrer" aria-label="Escribir por WhatsApp" title="Escribir por WhatsApp">' +
+        (CFG.waLabel ? '<span>' + esc(CFG.waLabel) + '</span>' : '') +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>' +
+      '</a>' +
+      '<button type="button" class="lb-close" aria-label="Cerrar chat">&times;</button></div>' +
+      '<div class="lb-msgs" role="log" aria-live="polite"></div>' +
+      '<form class="lb-form" autocomplete="off">' +
+        '<input class="lb-input" type="text" maxlength="400" placeholder="Escriba su consulta..." aria-label="Escriba su consulta">' +
+        '<button type="submit" class="lb-send" aria-label="Enviar"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg></button>' +
+      '</form>' +
+      '<div class="lb-foot">Respuestas automáticas · Para precios, consulte por WhatsApp</div>' +
+    '</div>' +
+    '<button type="button" class="lb-launcher" aria-label="Abrir chat de Láser Bahía" aria-expanded="false">' +
+      '<svg viewBox="0 0 24 24"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 1-2z"/></svg>' +
+    '</button>';
+
+  var launcher = root.querySelector('.lb-launcher');
+  var closeBtn = root.querySelector('.lb-close');
+  var msgs = root.querySelector('.lb-msgs');
+  var form = root.querySelector('.lb-form');
+  var input = root.querySelector('.lb-input');
+  var sendBtn = root.querySelector('.lb-send');
+  var backBtn = root.querySelector('.lb-back');
+  var hist = [];          // pila de pantallas visitadas: [{fn, args}]
+  var replaying = false;  // true mientras se re-muestra una pantalla al volver
+  var tip = root.querySelector('.lb-tip');
+  var tipBtn = root.querySelector('.lb-tip-btn');
+  var tipX = root.querySelector('.lb-tip-x');
+  var tipTimer = null, tipHideTimer = null;
+  var started = false;
+  var pending = null; // callback que espera la próxima respuesta de texto
+  var S = {};         // estado del pedido de presupuesto
+
+  function scroll() { msgs.scrollTop = msgs.scrollHeight; }
+  function bot(html) {
+    var d = document.createElement('div');
+    d.className = 'lb-msg bot';
+    d.innerHTML = html; // solo HTML propio; todo dato del usuario pasa por esc()
+    msgs.appendChild(d);
+    scroll();
+  }
+  function me(text) {
+    var d = document.createElement('div');
+    d.className = 'lb-msg me';
+    d.textContent = text;
+    msgs.appendChild(d);
+    scroll();
+  }
+  function clearOpts() {
+    var o = msgs.querySelectorAll('.lb-opts');
+    for (var i = 0; i < o.length; i++) o[i].parentNode.removeChild(o[i]);
+  }
+  function withNav(items) {
+    var hasMenu = items.some(function (i) { return i.fn === menu; });
+    var out = items.slice();
+    if (hist.length > 1 && !(hist.length === 2 && hasMenu)) out.push({ label: '← Volver', fn: back });
+    if (hist.length > 2 && !hasMenu) out.push({ label: 'Inicio', fn: menu });
+    return out;
+  }
+  function opts(items) {
+    clearOpts();
+    items = withNav(items);
+    var wrap = document.createElement('div');
+    wrap.className = 'lb-opts';
+    items.forEach(function (it) {
+      var el;
+      if (it.href) {
+        el = document.createElement('a');
+        el.href = it.href;
+        el.target = '_blank';
+        el.rel = 'noopener noreferrer';
+        el.className = 'lb-chip' + (it.wa ? ' lb-wa' : '');
+      } else {
+        el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'lb-chip';
+        el.addEventListener('click', function () {
+          clearOpts();
+          me(it.label);
+          it.fn();
+        });
+      }
+      el.textContent = it.label;
+      wrap.appendChild(el);
+    });
+    msgs.appendChild(wrap);
+    scroll();
+  }
+  // Pide texto libre, con atajos opcionales
+  function ask(placeholder, cb, chips) {
+    pending = cb;
+    input.placeholder = placeholder;
+    if (chips && chips.length) {
+      opts(chips.map(function (c) {
+        return { label: c, fn: function () { var f = pending; pending = null; resetPh(); if (f) f(c); } };
+      }));
+    }
+    input.focus();
+  }
+  function resetPh() { input.placeholder = 'Escriba su consulta...'; }
+
+  /* ===== Navegación: volver paso a paso ===== */
+  function syncNav() { backBtn.hidden = hist.length <= 1; }
+  function enter(fn, args) {
+    if (!replaying) hist.push({ fn: fn, args: args || [] });
+    syncNav();
+  }
+  function back() {
+    if (hist.length < 2) { menu(); return; }
+    hist.pop();
+    var p = hist[hist.length - 1];
+    pending = null; resetPh();
+    replaying = true;
+    try { p.fn.apply(null, p.args); } finally { replaying = false; }
+    syncNav();
+  }
+
+  /* ===== Pantallas ===== */
+  function menu() {
+    if (!replaying) hist = [];
+    enter(menu);
+    pending = null; resetPh();
+    bot('¿En qué le puedo ayudar?');
+    opts([
+      { label: 'Pedir presupuesto', fn: function () { quote(); } },
+      { label: 'Materiales y espesores', fn: materials },
+      { label: 'Cómo enviar mi archivo', fn: fileFormats },
+      { label: 'Qué podemos hacer', fn: whatWeDo },
+      { label: 'Simuladores de grabado', fn: simulators },
+      { label: 'Contacto y dirección', fn: contact }
+    ]);
+  }
+  function backOpts(extra) {
+    var base = [{ label: 'Pedir presupuesto', fn: function () { quote(); } }, { label: 'Volver al menú', fn: menu }];
+    opts((extra || []).concat(base));
+  }
+
+  function materials() {
+    enter(materials);
+    pending = null; resetPh();
+    bot('Estos son los materiales con los que trabajamos. Toque uno para ver espesores y procesos disponibles.');
+    var items = MATS.map(function (m) { return { label: m.name, fn: function () { matInfo(m); } }; });
+    items.push({ label: 'Otro material', fn: otherMat });
+    items.push({ label: 'Volver al menú', fn: menu });
+    opts(items);
+  }
+  function mark(v) { return v ? '<span class="lb-ok">✓</span>' : '<span class="lb-no">✕</span>'; }
+  function matInfo(m) {
+    enter(matInfo, [m]);
+    var h = '<strong>' + esc(m.name) + '</strong><br>';
+    h += m.esp.length ? 'Espesores: ' + m.esp.join(' · ') + ' mm' : 'Espesor: consultar';
+    h += '<ul><li>Corte ' + mark(m.corte) + '</li><li>Grabado ' + mark(m.grabado) + '</li><li>Plegado ' + mark(m.plegado) + '</li><li>Impresión ' + mark(m.impresion) + '</li>';
+    if (m.horno !== undefined) h += '<li>Pintura al horno ' + mark(m.horno) + '</li>';
+    h += '</ul>';
+    bot(h);
+    opts([
+      { label: 'Pedir presupuesto con este material', fn: function () { quote(m); } },
+      { label: 'Ver otros materiales', fn: materials },
+      { label: 'Volver al menú', fn: menu }
+    ]);
+  }
+  function otherMat() {
+    enter(otherMat);
+    bot('Además de esos, también se trabaja madera, cuero, tela, papel, vidrio, cristal, cerámica, mármol, granito, piedra, aluminio anodizado y letras corpóreas, entre otros. <strong>Consulte por su producto o material</strong> y se lo confirmamos.');
+    opts([
+      { label: 'Consultar por WhatsApp', href: waLink('Hola Láser Bahía, quería consultar si pueden trabajar con este material: '), wa: true },
+      { label: 'Pedir presupuesto', fn: function () { quote(); } },
+      { label: 'Ver materiales', fn: materials },
+      { label: 'Volver al menú', fn: menu }
+    ]);
+  }
+
+  function fileFormats() {
+    enter(fileFormats);
+    pending = null; resetPh();
+    bot(
+      '<strong>Formatos de archivo</strong><br>Envíe su diseño en <strong>Corel, Illustrator o CAD</strong>, con las líneas de corte y marcado editadas a curvas.' +
+      '<ul>' +
+      '<li><span class="lb-dot" style="background:#e53935"></span><strong>Corte:</strong> línea muy fina, color <strong>rojo</strong></li>' +
+      '<li><span class="lb-dot" style="background:#1e5bd8"></span><strong>Marcado:</strong> línea muy fina, color <strong>azul</strong></li>' +
+      '<li><span class="lb-dot" style="background:#111"></span><strong>Grabado:</strong> línea del espesor que desee, color <strong>negro</strong></li>' +
+      '</ul>' +
+      'Los textos deben estar convertidos a curvas (o envíenos la tipografía). Los grabados pueden ser imágenes, pero si están en curvas la definición es mejor.'
+    );
+    bot('¿No tiene el archivo listo? También hacemos el desarrollo y adaptación del diseño.');
+    backOpts([{ label: 'Servicio de diseño gráfico', fn: function () { quote(null, 'Diseño gráfico'); } }]);
+  }
+
+  function whatWeDo() {
+    enter(whatWeDo);
+    pending = null; resetPh();
+    bot(
+      '<strong>Servicios</strong><ul>' +
+      '<li><strong>Corte láser:</strong> cortes precisos en variedad de materiales y espesores.</li>' +
+      '<li><strong>Grabado:</strong> grabados permanentes en bajo relieve sobre distintas superficies.</li>' +
+      '<li><strong>Marcado:</strong> identificación, numeración y marcado de piezas.</li>' +
+      '<li><strong>Diseño gráfico:</strong> desarrollo y adaptación de archivos.</li></ul>' +
+      'Trabajamos desde una pieza única o prototipo hasta producciones en serie de miles de piezas, con 16 años de trayectoria.'
+    );
+    bot(
+      'Algunos ejemplos: identificación de equipos y tableros, códigos de barras, frentes y paneles, trofeos y premios, packaging, llaveros, bolígrafos, termos, cristalería, maquetería, stencils, souvenirs y rompecabezas.'
+    );
+    backOpts([{ label: 'Ver materiales', fn: materials }]);
+  }
+
+  function simulators() {
+    enter(simulators);
+    pending = null; resetPh();
+    bot('Estos son los simuladores de grabado del sitio:');
+    var items = CFG.sims.map(function (s) { return { label: s[0], href: s[1] }; });
+    items.push({ label: 'Volver al menú', fn: menu });
+    opts(items);
+  }
+
+  function hours() {
+    enter(hours);
+    pending = null; resetPh();
+    bot('Los horarios de atención figuran en nuestro perfil de Google Maps, donde se mantienen siempre actualizados.');
+    opts([
+      { label: 'Ver horarios en Google Maps', href: CFG.mapUrl },
+      { label: 'Consultar por WhatsApp', href: waLink('Hola Láser Bahía, quería consultar los horarios de atención.'), wa: true },
+      { label: 'Contacto y dirección', fn: contact }
+    ]);
+  }
+
+  function contact() {
+    enter(contact);
+    pending = null; resetPh();
+    bot(
+      '<strong>Láser Bahía</strong><br>Lavalle 363, Bahía Blanca (8000), Buenos Aires.<br>' +
+      ext(CFG.mapUrl, 'Ver en el mapa') + ' (allí figuran los horarios de atención, siempre actualizados)<br><br>' +
+      'WhatsApp: ' + ext(waLink(''), '291 426-5252') + '<br>' +
+      'Email: <a href="mailto:' + CFG.email + '">' + CFG.email + '</a><br><br>' +
+      ext('https://www.instagram.com/laser_bahia_/', 'Instagram') + ' · ' +
+      ext('https://www.facebook.com/LaserBahiaLB', 'Facebook') + ' · ' +
+      ext('https://www.youtube.com/channel/UCBNx6DQHxo3ma4JlePIQxPA', 'YouTube')
+    );
+    opts([
+      { label: 'Escribir por WhatsApp', href: waLink('Hola Láser Bahía, quería hacer una consulta.'), wa: true },
+      { label: 'Pedir presupuesto', fn: function () { quote(); } },
+      { label: 'Volver al menú', fn: menu }
+    ]);
+  }
+
+  /* ===== Flujo de presupuesto ===== */
+  function quote(preMat, preService) {
+    S = { mat: preMat || null, matText: '', service: preService || '', esp: '', qty: '', detail: '', name: '' };
+    if (preService) { afterService(); return; }
+    enter(quote, [preMat, preService]);
+    bot(preMat
+      ? 'Armamos su pedido con <strong>' + esc(preMat.name) + '</strong>. ¿Qué servicio necesita?'
+      : 'Armamos su pedido en unos pasos y lo enviamos por WhatsApp ya ordenado. ¿Qué servicio necesita?');
+    opts([
+      { label: 'Corte láser', fn: function () { S.service = 'Corte láser'; afterService(); } },
+      { label: 'Grabado', fn: function () { S.service = 'Grabado'; afterService(); } },
+      { label: 'Marcado', fn: function () { S.service = 'Marcado'; afterService(); } },
+      { label: 'Diseño gráfico', fn: function () { S.service = 'Diseño gráfico'; afterService(); } },
+      { label: 'No estoy seguro', fn: function () { S.service = 'A definir'; afterService(); } }
+    ]);
+  }
+  function compatible(m) {
+    if (S.service === 'Corte láser') return !!m.corte;
+    if (S.service === 'Grabado') return !!m.grabado;
+    return true;
+  }
+  function afterService() {
+    if (S.service === 'Diseño gráfico') { stepDetail(); return; }
+    if (S.mat) {
+      if (!compatible(S.mat)) {
+        bot('Ojo: según nuestra lista, <strong>' + esc(S.mat.name) + '</strong> no es apto para ' + esc(S.service.toLowerCase()) + '. Elija otro material o consúltenos.');
+        S.mat = null;
+        stepMaterial();
+      } else { stepThickness(); }
+      return;
+    }
+    stepMaterial();
+  }
+  function stepMaterial() {
+    enter(stepMaterial);
+    bot('¿Sobre qué material? Elija uno o escríbalo si es otro.');
+    var list = MATS.filter(compatible).map(function (m) { return m.name; });
+    list.push('Otro / no sé');
+    ask('O escriba su material...', function (val) {
+      var found = null;
+      MATS.forEach(function (m) { if (norm(m.name) === norm(val)) found = m; });
+      if (found) { S.mat = found; }
+      else { S.matText = (norm(val) === norm('Otro / no sé')) ? 'A consultar' : val; }
+      stepThickness();
+    }, list);
+  }
+  function stepThickness() {
+    if (S.mat && S.mat.esp.length) {
+      enter(stepThickness);
+      bot('¿Qué espesor? (en mm)');
+      var chips = S.mat.esp.map(function (e) { return e + ' mm'; });
+      chips.push('No sé');
+      ask('O escriba otro espesor...', function (val) { S.esp = val; stepQty(); }, chips);
+    } else { stepQty(); }
+  }
+  function stepQty() {
+    enter(stepQty);
+    bot('¿Qué cantidad aproximada necesita?');
+    ask('Ej: 1 pieza, 200 unidades...', function (val) { S.qty = val; stepDetail(); }, ['1 pieza', '2 a 50', 'Más de 50', 'Producción en serie']);
+  }
+  function stepDetail() {
+    enter(stepDetail);
+    bot('Cuéntenos las medidas aproximadas y qué desea hacer (texto, logo, diseño, uso de la pieza).');
+    ask('Escriba los detalles...', function (val) { S.detail = val; stepName(); }, ['Lo explico por WhatsApp']);
+  }
+  function stepName() {
+    enter(stepName);
+    bot('¿Cómo se llama? (opcional)');
+    ask('Su nombre...', function (val) { S.name = (norm(val) === norm('Prefiero no decirlo')) ? '' : val; summary(); }, ['Prefiero no decirlo']);
+  }
+  function summary() {
+    enter(summary);
+    var matTxt = S.mat ? S.mat.name : (S.matText || '');
+    var rows = [['Servicio', S.service], ['Material', matTxt], ['Espesor', S.esp], ['Cantidad', S.qty], ['Detalle', S.detail]];
+    var lines = [], html = '<strong>Este es el resumen de su pedido:</strong><ul>';
+    rows.forEach(function (r) {
+      if (r[1]) { html += '<li>' + r[0] + ': ' + esc(r[1]) + '</li>'; lines.push('• ' + r[0] + ': ' + r[1]); }
+    });
+    html += '</ul>Toque el botón para enviarlo por WhatsApp. Si ya tiene el diseño, adjúntelo ahí mismo (Corel, Illustrator o CAD).';
+    var msg = 'Hola Láser Bahía' + (S.name ? ', soy ' + S.name : '') + '. Quiero pedir presupuesto:\n' + lines.join('\n') + '\n(Enviado desde el asistente de la web)';
+    bot(html);
+    opts([
+      { label: 'Enviar por WhatsApp', href: waLink(msg), wa: true },
+      { label: 'Cómo enviar mi archivo', fn: fileFormats },
+      { label: 'Volver al menú', fn: menu }
+    ]);
+  }
+
+  /* ===== Texto libre: respuestas por palabras clave ===== */
+  function route(text) {
+    var t = norm(text);
+    if (/presupuesto|precio|costo|cotiz|cuanto sale|cuanto cuesta|valor/.test(t)) return quote();
+    if (/horario|atienden|atencion al publico|abren|cierran|abierto|abiertos|sabado|domingo|feriado/.test(t)) return hours();
+    if (/simulad|simular/.test(t)) return simulators();
+    if (/archivo|formato|corel|illustrator|ilustrator|\bcad\b|vector|curva|enviar mi dise/.test(t)) return fileFormats();
+    if (/diseno grafico|disenador|armar el diseno|hacer el diseno/.test(t)) return quote(null, 'Diseño gráfico');
+    if (/material|espesor|mdf|acrilico|acero|inox|goma|eva|pvc|cuero|tela|textil|carton|pet\b|foam|vidrio|marmol|madera|piedra|aluminio/.test(t)) return materials();
+    if (/direccion|donde|ubicacion|mapa|lavalle|local/.test(t)) return contact();
+    if (/whatsapp|telefono|tel\b|celular|mail|correo|contacto|instagram|facebook/.test(t)) return contact();
+    if (/servicio|que hacen|que hacemos|que pueden|trabajos|corte|grabado|marcado|laser/.test(t)) return whatWeDo();
+    if (/^(hola|buenas|buen dia|buenos dias|buenas tardes|buenas noches|ey|hey)\b/.test(t)) {
+      bot('¡Hola! Soy el asistente de Láser Bahía.'); return menu();
+    }
+    if (/gracias|genial|perfecto|dale/.test(t)) { bot('¡De nada! Cualquier otra duda, acá estoy.'); return menu(); }
+    bot('No estoy seguro de haber entendido. Puede elegir una opción del menú o consultarlo directo con el equipo por WhatsApp.');
+    opts([
+      { label: 'Consultar por WhatsApp', href: waLink('Hola Láser Bahía, tengo una consulta: ' + text), wa: true },
+      { label: 'Ver el menú', fn: menu }
+    ]);
+  }
+
+  /* ===== Tooltip automático ===== */
+  // El aviso sale hasta CFG.tipMaxShows veces por sesión, salvo que el visitante lo cierre o abra el chat.
+  // Para probarlo: agregá ?lbtip=1 a la URL (reinicia el contador).
+  function tipCount() { try { return parseInt(sessionStorage.getItem('lbTip2') || '0', 10) || 0; } catch (e) { return 0; } }
+  function setTipCount(n) { try { sessionStorage.setItem('lbTip2', String(n)); } catch (e) {} }
+  function tipAllowed() {
+    if (/[?&]lbtip(=|&|$)/.test(location.search)) { setTipCount(0); return true; }
+    return tipCount() < CFG.tipMaxShows;
+  }
+  function hideTip(dismiss) {
+    clearTimeout(tipTimer); clearTimeout(tipHideTimer);
+    tip.classList.remove('lb-tip-show');
+    if (dismiss === true) setTipCount(999); // cerrado o usado a propósito: no insistir más en esta sesión
+  }
+  function showTip() {
+    if (root.classList.contains('lb-open')) return;
+    setTipCount(tipCount() + 1);
+    tip.classList.add('lb-tip-show');
+    if (CFG.tipDuration > 0) tipHideTimer = setTimeout(function () { hideTip(false); }, CFG.tipDuration);
+  }
+  if (tipAllowed()) { tipTimer = setTimeout(showTip, CFG.tipDelay); }
+  tipX.addEventListener('click', function () { hideTip(true); });
+  tipBtn.addEventListener('click', function () { openPanel(); });
+
+  /* ===== Eventos ===== */
+  function openPanel() {
+    hideTip(false); // abrir el chat no apaga el aviso: solo la × lo silencia por el resto de la sesión
+    root.classList.add('lb-open');
+    launcher.setAttribute('aria-expanded', 'true');
+    if (!started) {
+      started = true;
+      bot('¡Hola! 👋 Soy el asistente de <strong>Láser Bahía</strong>. Le ayudo con materiales, formatos de archivo y a armar su pedido de presupuesto.');
+      menu();
+    }
+    setTimeout(function () { input.focus(); }, 50);
+  }
+  function closePanel() {
+    root.classList.remove('lb-open');
+    launcher.setAttribute('aria-expanded', 'false');
+    launcher.focus();
+  }
+  launcher.addEventListener('click', function () { root.classList.contains('lb-open') ? closePanel() : openPanel(); });
+  closeBtn.addEventListener('click', closePanel);
+  backBtn.addEventListener('click', function () { clearOpts(); me('← Volver'); back(); });
+  root.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root.classList.contains('lb-open')) closePanel(); });
+  function submitText() {
+    var v = input.value.trim();
+    if (!v) return;
+    input.value = '';
+    clearOpts();
+    me(v);
+    try {
+      if (pending) { var f = pending; pending = null; resetPh(); f(v); }
+      else route(v);
+    } catch (err) {
+      pending = null; resetPh();
+      bot('Disculpe, ocurrió un inconveniente. Puede consultarnos directamente por WhatsApp.');
+      opts([{ label: 'Escribir por WhatsApp', href: waLink('Hola Láser Bahía, quería hacer una consulta: ' + v), wa: true }, { label: 'Ver el menú', fn: menu }]);
+    }
+  }
+  // Enter, clic y submit llegan a la misma función, sin depender de cómo el tema trate al formulario
+  form.addEventListener('submit', function (e) { e.preventDefault(); submitText(); });
+  input.addEventListener('keydown', function (e) {
+    if ((e.key === 'Enter' || e.keyCode === 13) && !e.isComposing) { e.preventDefault(); submitText(); }
+  });
+  sendBtn.addEventListener('click', function (e) { e.preventDefault(); submitText(); });
+})();
+</script>
