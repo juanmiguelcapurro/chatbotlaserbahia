@@ -106,25 +106,24 @@
 #lb-bot .lb-back:focus-visible { outline: 3px solid #1a73e8; outline-offset: 2px; }
 #lb-bot .lb-back[hidden] { display: none; }
 
-/* ===== Pulso del botón ===== */
-#lb-bot .lb-launcher { position: relative; }
-#lb-bot .lb-launcher::before,
-#lb-bot .lb-launcher::after {
-  content: ""; position: absolute; inset: 0; border-radius: 50%;
-  background: var(--lb-accent); opacity: 0; z-index: -1; pointer-events: none;
-  animation: lbPulse 2.4s ease-out infinite;
+/* ===== Latido del botón (box-shadow: no depende de capas ni de pseudo-elementos) ===== */
+#lb-bot { --lb-accent-rgb: 242,107,29; }
+#lb-bot .lb-launcher { position: relative; animation: lbBeat 2.2s ease-out infinite; }
+#lb-bot.lb-open .lb-launcher { animation: none; }
+@keyframes lbBeat {
+  0%   { box-shadow: 0 6px 20px rgba(0,0,0,.28), 0 0 0 0 rgba(var(--lb-accent-rgb), .55); }
+  70%  { box-shadow: 0 6px 20px rgba(0,0,0,.28), 0 0 0 22px rgba(var(--lb-accent-rgb), 0); }
+  100% { box-shadow: 0 6px 20px rgba(0,0,0,.28), 0 0 0 0 rgba(var(--lb-accent-rgb), 0); }
 }
-#lb-bot .lb-launcher::after { animation-delay: 1.2s; }
-#lb-bot.lb-open .lb-launcher::before,
-#lb-bot.lb-open .lb-launcher::after { animation: none; opacity: 0; }
-@keyframes lbPulse {
-  0%   { transform: scale(1);   opacity: .55; }
-  80%  { transform: scale(1.85); opacity: 0; }
-  100% { transform: scale(1.85); opacity: 0; }
-}
+/* Si el sistema pide reducir movimiento: sin expansión, solo un resplandor suave que sube y baja */
 @media (prefers-reduced-motion: reduce) {
-  #lb-bot .lb-launcher::before, #lb-bot .lb-launcher::after { animation: none; opacity: 0; }
+  #lb-bot .lb-launcher { animation: lbGlow 2.4s ease-in-out infinite; }
+  #lb-bot.lb-open .lb-launcher { animation: none; }
   #lb-bot .lb-tip { transition: none; }
+}
+@keyframes lbGlow {
+  0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,.28), 0 0 0 4px rgba(var(--lb-accent-rgb), 0); }
+  50%      { box-shadow: 0 6px 20px rgba(0,0,0,.28), 0 0 0 7px rgba(var(--lb-accent-rgb), .35); }
 }
 
 /* ===== Tooltip automático ===== */
@@ -269,20 +268,30 @@
   var pending = null; // callback que espera la próxima respuesta de texto
   var S = {};         // estado del pedido de presupuesto
 
-  function scroll() { msgs.scrollTop = msgs.scrollHeight; }
+  var anchor = null;      // primer mensaje del bot de la respuesta actual
+  var newTurn = true;     // true cuando el visitante acaba de elegir o escribir algo
+  function toBottom() { msgs.scrollTop = msgs.scrollHeight; }
+  // Deja el comienzo de la respuesta arriba del área de chat, para leerla sin subir con el scroll
+  function scrollToAnswer() {
+    if (!anchor || !anchor.parentNode) { toBottom(); return; }
+    var delta = anchor.getBoundingClientRect().top - msgs.getBoundingClientRect().top - 6;
+    msgs.scrollTop = msgs.scrollTop + delta;
+  }
   function bot(html) {
     var d = document.createElement('div');
     d.className = 'lb-msg bot';
     d.innerHTML = html; // solo HTML propio; todo dato del usuario pasa por esc()
     msgs.appendChild(d);
-    scroll();
+    if (newTurn || !anchor) { anchor = d; newTurn = false; }
+    scrollToAnswer();
   }
   function me(text) {
     var d = document.createElement('div');
     d.className = 'lb-msg me';
     d.textContent = text;
     msgs.appendChild(d);
-    scroll();
+    newTurn = true;
+    toBottom();
   }
   function clearOpts() {
     var o = msgs.querySelectorAll('.lb-opts');
@@ -322,7 +331,7 @@
       wrap.appendChild(el);
     });
     msgs.appendChild(wrap);
-    scroll();
+    scrollToAnswer();
   }
   // Pide texto libre, con atajos opcionales
   function ask(placeholder, cb, chips) {
