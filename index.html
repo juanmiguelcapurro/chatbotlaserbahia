@@ -494,9 +494,20 @@
     S = { mat: preMat || null, matText: '', service: preService || '', esp: '', qty: '', detail: '', name: '' };
     if (preService) { afterService(); return; }
     enter(quote, [preMat, preService]);
-    bot(preMat
-      ? 'Armamos su pedido con <strong>' + esc(preMat.name) + '</strong>. ¿Qué servicio necesita?'
-      : 'Armamos su pedido en unos pasos y lo enviamos por WhatsApp ya ordenado. ¿Qué servicio necesita?');
+    if (preMat) {
+      serviceChoices('Armamos su pedido con <strong>' + esc(preMat.name) + '</strong>. ¿Qué servicio necesita?');
+      return;
+    }
+    bot('Armamos su pedido en unos pasos y lo enviamos por WhatsApp ya ordenado. ¿Qué desea pedir?');
+    var items = Object.keys(PRODUCTS).map(function (id) {
+      return { label: PRODUCTS[id].label, fn: function () { startProduct(id); } };
+    });
+    items.push({ label: 'Otro trabajo', fn: otherJob });
+    opts(items);
+  }
+  // Flujo genérico (corte, marcado, otros materiales, diseño): se usa desde "Otro trabajo" y desde Materiales
+  function serviceChoices(text) {
+    bot(text);
     opts([
       { label: 'Corte láser', fn: function () { S.service = 'Corte láser'; afterService(); } },
       { label: 'Grabado', fn: function () { S.service = 'Grabado'; afterService(); } },
@@ -504,6 +515,10 @@
       { label: 'Diseño gráfico', fn: function () { S.service = 'Diseño gráfico'; afterService(); } },
       { label: 'No estoy seguro', fn: function () { S.service = 'A definir'; afterService(); } }
     ]);
+  }
+  function otherJob() {
+    enter(otherJob);
+    serviceChoices('Para corte láser, marcado, otros grabados o diseño, indíquenos el servicio que necesita.');
   }
   function compatible(m) {
     if (S.service === 'Corte láser') return !!m.corte;
@@ -577,13 +592,114 @@
     ]);
   }
 
+  /* ===== Presupuesto por producto =====
+     Cada producto es una lista de pasos. Una opción puede traer:
+       then:   pasos que se insertan a continuación (ej. el espesor depende del material)
+       open:   pide escribir la respuesta (ej. "Otro", "Otra medida"); prefix antepone un texto al valor
+     Para actualizar espesores, colores o medidas basta con editar estas listas. */
+  var NO_SE = 'No sé';
+  function espesor(list) { return { key: 'Espesor', q: '¿Qué espesor necesita?', options: list.concat([NO_SE]) }; }
+  function color(list) { return { key: 'Color', q: '¿De qué color?', options: list.concat([{ label: 'Otro', open: '¿Qué color necesita? Escríbalo.' }]) }; }
+  var OTRA_MEDIDA = { label: 'Otra medida', open: '¿Qué medida necesita? Escríbala.' };
+  var CANTIDAD = { key: 'Cantidad', q: '¿Qué cantidad aproximada necesita?', ph: 'Ej: 1 pieza, 200 unidades...', options: ['1 pieza', '2 a 50', 'Más de 50', 'Producción en serie'] };
+  var ARCHIVO = { key: 'Archivo de diseño', q: '¿Tiene el archivo del diseño?', options: ['Sí, tengo el archivo', 'No, necesito diseño'] };
+
+  var PRODUCTS = {
+    placas: { label: 'Grabado de placas', steps: [
+      { key: 'Material', q: '¿En qué material desea la placa?', options: [
+        { label: 'Acero', then: [espesor(['0,5 mm', '1 mm', '1,5 mm', '2 mm'])] },
+        { label: 'Acrílico', then: [espesor(['2 mm', '3 mm', '4 mm', '5 mm', '6 mm', '8 mm', '10 mm', '20 mm'])] },
+        { label: 'Acrílico de color', then: [color(['Negro', 'Rojo', 'Blanco', 'Azul', 'Verde'])] },
+        { label: 'Plástico bicapa', then: [color(['Dorado', 'Metalizado', 'Negro', 'Blanco', 'Cobre', 'Rojo'])] },
+        { label: 'Aluminio', then: [espesor(['0,5 mm', '1 mm', '2 mm', '3 mm', '5 mm o más'])] },
+        { label: 'Otro', open: '¿Qué material necesita? Escríbalo.' }
+      ] },
+      { key: 'Medidas de la placa', q: '¿Qué medidas aproximadas tiene la placa?', ph: 'Ej: 10 x 5 cm', options: ['Lo indico por WhatsApp'] },
+      CANTIDAD, ARCHIVO
+    ] },
+    objetos: { label: 'Grabado de objetos', steps: [
+      { key: 'Objeto', q: '¿Qué objeto desea grabar?', options: ['Mates', 'Termos', 'Vasos térmicos', 'Copas', 'Bombillas', 'Agendas', 'Billeteras', 'Bolígrafos',
+        { label: 'Otro', open: '¿Qué objeto desea grabar? Escríbalo.' }] },
+      { key: 'Qué grabar', q: '¿Qué desea grabar? (texto, nombre, logo...)', ph: 'Escriba qué desea grabar...', options: ['Lo indico por WhatsApp'] },
+      CANTIDAD, ARCHIVO
+    ] },
+    dijes: { label: 'Dijes para bijouterie', steps: [
+      { key: 'Material', q: '¿En qué material desea los dijes?', options: ['Acrílico', 'Plástico bicapa', 'Acero'] },
+      { key: 'Medida', q: '¿Qué medida necesita?', options: ['10 mm', '15 mm', '20 mm', '25 mm', '30 mm', OTRA_MEDIDA,
+        { label: 'Tengo una forma en particular', open: 'Cuéntenos qué forma tiene en mente.', prefix: 'Forma particular: ' }] },
+      CANTIDAD, ARCHIVO
+    ] },
+    etiquetas: { label: 'Etiquetas de ecocuero', steps: [
+      { key: 'Medida', q: '¿Qué medida necesita?', options: ['40 x 10 mm', '50 x 20 mm', '30 x 30 mm', '20 x 10 mm', '20 x 20 mm', OTRA_MEDIDA] },
+      CANTIDAD, ARCHIVO
+    ] }
+  };
+
+  function optLabel(o) { return typeof o === 'string' ? o : o.label; }
+  function startProduct(id) { var p = PRODUCTS[id]; flowStep(p, p.steps, 0, []); }
+  // Todo el estado viaja en los argumentos (pasos y respuestas), por eso "Volver" repite cada pantalla tal cual estaba
+  function flowStep(prod, steps, idx, ans) {
+    if (idx >= steps.length) { flowName(prod, ans); return; }
+    enter(flowStep, [prod, steps, idx, ans]);
+    var st = steps[idx];
+    bot((idx === 0 && !st.open ? '<strong>' + esc(prod.label) + '</strong><br>' : '') + st.q);
+    var chips = st.options.map(optLabel);
+    ask(st.ph || (chips.length ? 'O escriba otra opción...' : 'Escriba su respuesta...'), function (val) {
+      var opt = null;
+      st.options.forEach(function (o) { if (norm(optLabel(o)) === norm(val)) opt = o; });
+      var rich = opt && typeof opt !== 'string' ? opt : null;
+      if (rich && rich.open) {
+        var openStep = { key: st.key, q: rich.open, ph: 'Escriba su respuesta...', options: [], prefix: rich.prefix || '', open: true };
+        flowStep(prod, steps.slice(0, idx).concat([openStep], steps.slice(idx + 1)), idx, ans);
+        return;
+      }
+      var v = norm(val) === norm(NO_SE) ? 'A consultar' : val;
+      if (st.prefix) v = st.prefix + v;
+      var next = rich && rich.then ? steps.slice(0, idx + 1).concat(rich.then, steps.slice(idx + 1)) : steps;
+      flowStep(prod, next, idx + 1, ans.concat([[st.key, v]]));
+    }, chips);
+  }
+  function flowName(prod, ans) {
+    enter(flowName, [prod, ans]);
+    bot('¿Cómo se llama? (opcional)');
+    ask('Su nombre...', function (val) {
+      flowSummary(prod, ans, norm(val) === norm('Prefiero no decirlo') ? '' : val);
+    }, ['Prefiero no decirlo']);
+  }
+  function flowSummary(prod, ans, name) {
+    enter(flowSummary, [prod, ans, name]);
+    var rows = [['Producto', prod.label]].concat(ans);
+    var lines = [], html = '<strong>Este es el resumen de su pedido:</strong><ul>', hasFile = false, needsDesign = false;
+    rows.forEach(function (r) {
+      if (!r[1]) return;
+      html += '<li>' + esc(r[0]) + ': ' + esc(r[1]) + '</li>';
+      lines.push('• ' + r[0] + ': ' + r[1]);
+      if (r[0] === ARCHIVO.key) { hasFile = /^si\b/.test(norm(r[1])); needsDesign = /^no\b/.test(norm(r[1])); }
+    });
+    html += '</ul>' + (hasFile
+      ? 'Envíelo por WhatsApp y adjunte allí su archivo.'
+      : needsDesign
+        ? 'Envíelo por WhatsApp. También hacemos el desarrollo y adaptación del diseño.'
+        : 'Envíelo por WhatsApp.');
+    var msg = 'Hola Láser Bahía' + (name ? ', soy ' + name : '') + '. Quiero pedir presupuesto:\n' + lines.join('\n') + '\n(Enviado desde el asistente de la web)';
+    bot(html);
+    var items = [{ label: 'Enviar por WhatsApp', href: waLink(msg), wa: true }];
+    if (hasFile) items.push({ label: 'Cómo enviar mi archivo', fn: fileFormats });
+    items.push({ label: 'Volver al menú', fn: menu });
+    opts(items);
+  }
+
   /* ===== Texto libre: respuestas por palabras clave ===== */
   function route(text) {
     var t = norm(text);
-    if (/presupuesto|precio|costo|cotiz|cuanto sale|cuanto cuesta|valor/.test(t)) return quote();
     if (/horario|atienden|atencion al publico|abren|cierran|abierto|abiertos|sabado|domingo|feriado/.test(t)) return hours();
     if (/simulad|simular/.test(t)) return simulators();
     if (/archivo|formato|corel|illustrator|ilustrator|\bcad\b|vector|curva|enviar mi dise/.test(t)) return fileFormats();
+    if (/\bdijes?\b|bijou/.test(t)) return startProduct('dijes');
+    if (/etiqueta|eco ?cuero/.test(t)) return startProduct('etiquetas');
+    if (/\bplacas?\b/.test(t)) return startProduct('placas');
+    if (/\b(mates?|termos?|vasos?|copas?|bombillas?|agendas?|billeteras?|boligrafos?|objetos?)\b/.test(t)) return startProduct('objetos');
+    if (/presupuesto|precio|costo|cotiz|cuanto sale|cuanto cuesta|valor/.test(t)) return quote();
     if (/diseno grafico|disenador|armar el diseno|hacer el diseno/.test(t)) return quote(null, 'Diseño gráfico');
     if (/material|espesor|mdf|acrilico|acero|inox|goma|eva|pvc|cuero|tela|textil|carton|pet\b|foam|vidrio|marmol|madera|piedra|aluminio/.test(t)) return materials();
     if (/direccion|donde|ubicacion|mapa|lavalle|local/.test(t)) return contact();
